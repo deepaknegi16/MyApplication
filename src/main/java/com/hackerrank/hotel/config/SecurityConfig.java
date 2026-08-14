@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -11,19 +13,22 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
 /**
- * Stateless HTTP Basic security.
+ * Stateless JWT security.
  *
- * - Reads (GET /hotel, /search) need any authenticated user (USER or ADMIN).
- * - DELETE /hotel needs ADMIN.
+ * - POST /auth/login is public and exchanges credentials for a signed HS256 token.
+ * - Every other API call must carry "Authorization: Bearer <token>", validated by
+ *   Spring Security's OAuth2 resource server against the same signing key.
+ * - Reads (GET /hotel, /search) need any authenticated user (USER or ADMIN);
+ *   DELETE /hotel needs ADMIN. Roles travel inside the token's "roles" claim.
  * - Swagger UI, OpenAPI docs, H2 console and health/info probes are public.
- * - Credentials come from properties so they can be injected via environment
- *   variables in production (APP_SECURITY_*); never commit real secrets.
+ * - Credentials and the JWT secret come from properties so production can inject
+ *   them via environment variables (APP_SECURITY_*); never commit real secrets.
  */
 @Configuration
 @EnableWebSecurity
@@ -38,6 +43,7 @@ public class SecurityConfig {
                 // allow the H2 console to render its frames
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers(
                                 "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
                                 "/h2-console/**",
@@ -46,8 +52,27 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/hotel/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/hotel/**", "/search/**").hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated())
-                .httpBasic(withDefaults());
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return http.build();
+    }
+
+    /**
+     * The token stores authorities in a "roles" claim already prefixed with
+     * ROLE_, so no extra prefix is added here.
+     */
+    private JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
+        authorities.setAuthoritiesClaimName("roles");
+        authorities.setAuthorityPrefix("");
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(authorities);
+        return converter;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+        return configuration.getAuthenticationManager();
     }
 
     @Bean

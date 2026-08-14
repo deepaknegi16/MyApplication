@@ -109,31 +109,48 @@ d = 2R · atan2(√a, √(1−a))
   coordinates. Hotel 10 is seeded as already deleted, proving the search filter works.
 - In-memory DB: every restart resets to this seed state.
 
-## Security model
+## Security model (JWT)
 
-Stateless HTTP Basic auth with two in-memory users (credentials come from properties, so
-production injects them via environment variables — see `application-prod.properties`):
+Stateless JWT auth: `POST /auth/login` exchanges credentials for an HS256-signed token
+(default 60 min expiry); every other call carries `Authorization: Bearer <token>`, which
+Spring Security's OAuth2 resource server validates against the same signing key. Roles
+travel inside the token's `roles` claim. Credentials and the signing secret come from
+properties, so production injects them via environment variables — see
+`application-prod.properties`.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as AuthController
+    participant RS as Resource server filter
+    participant Ctrl as HotelController
+
+    C->>A: POST /auth/login {username, password}
+    alt bad credentials
+        A-->>C: 401 Unauthorized
+    else valid
+        A-->>C: 200 {accessToken, "Bearer", 3600}
+    end
+    C->>RS: GET /hotel/1 + Authorization: Bearer <token>
+    alt token missing / invalid / expired
+        RS-->>C: 401 Unauthorized
+    else signature + expiry OK
+        RS->>Ctrl: request with roles from token
+        Note over Ctrl: DELETE additionally requires ROLE_ADMIN → else 403
+    end
+```
 
 | Who | Can do |
 |---|---|
-| *anonymous* | Swagger UI, `/v3/api-docs`, H2 console, `/actuator/health`, `/actuator/info` |
+| *anonymous* | `POST /auth/login`, Swagger UI, `/v3/api-docs`, H2 console, `/actuator/health`, `/actuator/info` |
 | `user` / `user123` (ROLE_USER) | `GET /hotel/{id}`, `GET /search/{cityId}` |
 | `admin` / `admin123` (ROLE_ADMIN) | everything above + `DELETE /hotel/{id}` + full actuator |
-
-```mermaid
-flowchart LR
-    R[Request] --> Q{Authenticated?}
-    Q -->|no| E1[401 Unauthorized]
-    Q -->|yes| P{DELETE /hotel?}
-    P -->|yes, not ADMIN| E2[403 Forbidden]
-    P -->|allowed| CT[Controller]
-```
 
 ## Production aspects
 
 - **OpenAPI / Swagger** (springdoc 3.1.0) — interactive docs at `/swagger-ui.html`, machine-readable
   spec at `/v3/api-docs`; every endpoint annotated with summaries and response codes, and the
-  UI has an Authorize button for Basic auth.
+  UI has an Authorize button — paste the JWT from `/auth/login` there.
 - **Actuator** — `/actuator/health` (with liveness/readiness probes) and `/actuator/info` public
   for load balancers; `/actuator/metrics` admin-only.
 - **Validation** — path ids must be positive numbers; violations return 400 with a clear message.
@@ -148,13 +165,23 @@ flowchart LR
 ```bash
 ./mvnw spring-boot:run                                   # start on :8080
 open http://localhost:8080/swagger-ui.html               # interactive API docs
-curl -u user:user123 localhost:8080/hotel/1              # Q1
-curl -u admin:admin123 -X DELETE localhost:8080/hotel/4  # Q2 (admin only)
-curl -u user:user123 localhost:8080/search/2             # Q3 — nearest first
-./mvnw test                                              # 13 tests
+
+TOKEN=$(curl -s -X POST localhost:8080/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"user","password":"user123"}' | jq -r .accessToken)
+
+curl -H "Authorization: Bearer $TOKEN" localhost:8080/hotel/1     # Q1
+curl -H "Authorization: Bearer $TOKEN" localhost:8080/search/2    # Q3 — nearest first
+# Q2 needs an admin token:
+ADMIN=$(curl -s -X POST localhost:8080/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"admin123"}' | jq -r .accessToken)
+curl -X DELETE -H "Authorization: Bearer $ADMIN" localhost:8080/hotel/4
+
+./mvnw test                                              # 16 tests
 ```
 
 The integration test (`HotelControllerIntegrationTest`) covers every branch above:
-200/404 on get, soft-delete persistence, distance ordering, deleted-hotel exclusion,
-404 for an unknown city, 401 without credentials, 403 for non-admin delete, public
-swagger/health, and 400 for invalid ids.
+login success and bad-credentials 401, 200/404 on get, soft-delete persistence, distance
+ordering, deleted-hotel exclusion, 404 for an unknown city, 401 for missing or garbage
+tokens, 403 for non-admin delete, public swagger/health, and 400 for invalid ids.

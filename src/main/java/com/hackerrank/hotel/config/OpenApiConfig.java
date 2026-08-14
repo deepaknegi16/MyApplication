@@ -19,13 +19,15 @@ public class OpenApiConfig {
                         .title("Hotel Service API")
                         .description("Retrieve hotels, soft-delete them, and search a city's hotels "
                                 + "sorted by haversine distance from the city center. "
-                                + "Authenticate with HTTP Basic (user or admin).")
+                                + "Log in via POST /auth/login to get a JWT, then send it as "
+                                + "'Authorization: Bearer <token>'.")
                         .version("1.0.0")
                         .contact(new Contact().name("Deepak Negi").email("deepaknegi.1616@gmail.com")))
                 .components(new Components()
-                        .addSecuritySchemes("basicAuth", new SecurityScheme()
+                        .addSecuritySchemes("bearerAuth", new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)
-                                .scheme("basic")))
-                .addSecurityItem(new SecurityRequirement().addList("basicAuth"));
+                                .scheme("bearer")
+                                .bearerFormat("JWT")))
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
 }

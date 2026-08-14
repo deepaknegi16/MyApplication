@@ -26,6 +26,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ProblemDetail handleAuthenticationFailure(org.springframework.security.core.AuthenticationException ex) {
+        // thrown by /auth/login on bad credentials; never echo details back
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED,
+                "Invalid username or password");
+        problem.setTitle("Authentication failed");
+        return problem;
+    }
+
     @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
     public ProblemDetail handleConstraintViolation(jakarta.validation.ConstraintViolationException ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
