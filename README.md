@@ -155,3 +155,5 @@ on failure) and the built jar as downloadable artifacts on the run page.
 
 The check appears directly on each PR; to block merging on a red build, add a branch
 protection rule on `main` requiring the **build** check to pass.
+
+<!-- CI smoke test: PR opened to verify the CI pipeline triggers on pull requests. -->
