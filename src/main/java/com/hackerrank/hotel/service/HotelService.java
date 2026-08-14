@@ -1,5 +1,6 @@
 package com.hackerrank.hotel.service;
 
+import com.hackerrank.hotel.dto.HotelNameSearchResult;
 import com.hackerrank.hotel.dto.HotelSearchResult;
 import com.hackerrank.hotel.dto.UpdateHotelRequest;
 import com.hackerrank.hotel.model.Hotel;
@@ -21,4 +22,11 @@ public interface HotelService {
      * center. A null limit returns all of them.
      */
     List<HotelSearchResult> searchHotelsClosestToCityCenter(Long cityId, Integer limit);
+
+    /**
+     * Active hotels across all cities whose name contains the given text
+     * (case-insensitive), sorted by name. A null or blank name matches every
+     * hotel; a null limit returns all matches.
+     */
+    List<HotelNameSearchResult> searchHotelsByName(String name, Integer limit);
 }

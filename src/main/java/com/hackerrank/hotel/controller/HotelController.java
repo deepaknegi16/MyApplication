@@ -1,5 +1,6 @@
 package com.hackerrank.hotel.controller;
 
+import com.hackerrank.hotel.dto.HotelNameSearchResult;
 import com.hackerrank.hotel.dto.HotelSearchResult;
 import com.hackerrank.hotel.dto.UpdateHotelRequest;
 import com.hackerrank.hotel.model.Hotel;
@@ -54,6 +55,20 @@ public class HotelController {
     public ResponseEntity<Void> deleteHotelById(@PathVariable @Positive Long id) {
         hotelService.deleteHotelById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Search hotels by name across all cities",
+            description = "Active hotels whose name contains the given text (case-insensitive), "
+                    + "sorted by name. An empty or missing name matches every hotel. "
+                    + "Note: /hotel/search is matched before /hotel/{id} because exact paths win.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Matching hotel list")
+    })
+    @GetMapping("/hotel/search")
+    public ResponseEntity<List<HotelNameSearchResult>> searchHotelsByName(
+            @RequestParam(name = "name", required = false) String name,
+            @RequestParam(name = "limit", required = false) @Positive Integer limit) {
+        return ResponseEntity.ok(hotelService.searchHotelsByName(name, limit));
     }
 
     @Operation(summary = "Search hotels closest to a city center",

@@ -1,5 +1,6 @@
 package com.hackerrank.hotel.service;
 
+import com.hackerrank.hotel.dto.HotelNameSearchResult;
 import com.hackerrank.hotel.dto.HotelSearchResult;
 import com.hackerrank.hotel.dto.UpdateHotelRequest;
 import com.hackerrank.hotel.event.HotelDeletedEvent;
@@ -84,6 +85,25 @@ public class HotelServiceImpl implements HotelService {
         var results = hotelRepository.findByCityIdAndDeletedFalse(cityId).stream()
                 .map(hotel -> toSearchResult(hotel, city))
                 .sorted(Comparator.comparingDouble(HotelSearchResult::distanceFromCityCenterKm));
+        if (limit != null) {
+            results = results.limit(limit);
+        }
+        return results.toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<HotelNameSearchResult> searchHotelsByName(String name, Integer limit) {
+        String query = name == null ? "" : name.trim();
+        var results = hotelRepository
+                .findByDeletedFalseAndNameContainingIgnoreCaseOrderByNameAsc(query).stream()
+                .map(hotel -> new HotelNameSearchResult(
+                        hotel.getId(),
+                        hotel.getName(),
+                        hotel.getLatitude(),
+                        hotel.getLongitude(),
+                        hotel.getRating(),
+                        hotel.getCity() != null ? hotel.getCity().getName() : null));
         if (limit != null) {
             results = results.limit(limit);
         }
