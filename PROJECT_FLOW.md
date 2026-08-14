@@ -191,7 +191,7 @@ ADMIN=$(curl -s -X POST localhost:8080/auth/login \
   -d '{"username":"admin","password":"admin123"}' | jq -r .accessToken)
 curl -X DELETE -H "Authorization: Bearer $ADMIN" localhost:8080/hotel/4
 
-./mvnw test                                              # 16 tests
+./mvnw test                                              # 21 tests
 ```
 
 The integration test (`HotelControllerIntegrationTest`) covers every branch above:
