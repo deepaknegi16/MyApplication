@@ -167,3 +167,5 @@ One-time Jenkins setup to make PRs trigger builds:
 
 Jenkins then reports a commit status back to GitHub on each PR; you can make it required
 in branch protection rules.
+
+<!-- CI smoke test: PR opened to verify the Jenkins pipeline triggers on pull requests. -->
