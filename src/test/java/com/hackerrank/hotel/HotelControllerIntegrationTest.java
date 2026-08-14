@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.emptyString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -136,6 +137,61 @@ class HotelControllerIntegrationTest {
     void searchUnknownCityReturns404() throws Exception {
         mockMvc.perform(get("/search/9999").header(HttpHeaders.AUTHORIZATION, bearer(userToken)))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void searchRespectsLimitParam() throws Exception {
+        mockMvc.perform(get("/search/2").param("limit", "1").header(HttpHeaders.AUTHORIZATION, bearer(userToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].name").value("ITC Maratha"));
+    }
+
+    // ---------- PUT /hotel/{id} ----------
+
+    @Test
+    void adminCanUpdateHotelAndAuditTimestampsExist() throws Exception {
+        mockMvc.perform(put("/hotel/3")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Radisson Blu Dwarka Renovated\",\"latitude\":28.5823,\"longitude\":77.05,\"rating\":5}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Radisson Blu Dwarka Renovated"))
+                .andExpect(jsonPath("$.rating").value(5))
+                .andExpect(jsonPath("$.createdAt").exists());
+
+        // cache was evicted, so a fresh GET sees the update
+        mockMvc.perform(get("/hotel/3").header(HttpHeaders.AUTHORIZATION, bearer(userToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Radisson Blu Dwarka Renovated"));
+    }
+
+    @Test
+    void updateRequiresAdminRole() throws Exception {
+        mockMvc.perform(put("/hotel/1")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(userToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Hacked\",\"latitude\":0,\"longitude\":0,\"rating\":1}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateWithInvalidBodyReturns400() throws Exception {
+        // rating 9 violates @Max(5); blank name violates @NotBlank
+        mockMvc.perform(put("/hotel/1")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"\",\"latitude\":28.6,\"longitude\":77.2,\"rating\":9}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ---------- GET /city ----------
+
+    @Test
+    void cityListReturnsAllCities() throws Exception {
+        mockMvc.perform(get("/city").header(HttpHeaders.AUTHORIZATION, bearer(userToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)));
     }
 
     // ---------- Security ----------

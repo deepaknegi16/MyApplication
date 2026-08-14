@@ -109,6 +109,19 @@ d = 2R · atan2(√a, √(1−a))
   coordinates. Hotel 10 is seeded as already deleted, proving the search filter works.
 - In-memory DB: every restart resets to this seed state.
 
+## Beyond the three questions
+
+Later additions for learning purposes (each exists to demonstrate an annotation — see
+[INTERVIEW_GUIDE.md](INTERVIEW_GUIDE.md) Part 3):
+
+- `PUT /hotel/{id}` — full update of an active hotel (ADMIN only, validated body)
+- `GET /search/{cityId}?limit=N` — optional cap on results (`@RequestParam`)
+- `GET /city` — list cities (class-level `@RequestMapping`)
+- Caching on hotel reads (`@Cacheable`/`@CacheEvict`), async audit events on delete
+  (`@Async @EventListener`), a scheduled stats logger (`@Scheduled`), audit timestamps
+  on hotels (`@CreatedDate`/`@LastModifiedDate`), and typed JWT config
+  (`@ConfigurationProperties`)
+
 ## Security model (JWT)
 
 Stateless JWT auth: `POST /auth/login` exchanges credentials for an HS256-signed token

@@ -1,6 +1,7 @@
 package com.hackerrank.hotel.service;
 
 import com.hackerrank.hotel.dto.HotelSearchResult;
+import com.hackerrank.hotel.dto.UpdateHotelRequest;
 import com.hackerrank.hotel.model.Hotel;
 import java.util.List;
 
@@ -12,6 +13,12 @@ public interface HotelService {
     /** Q2: soft-delete — mark the hotel as deleted, keep the row. */
     void deleteHotelById(Long id);
 
-    /** Q3: all active hotels of a city, sorted by haversine distance to the city center. */
-    List<HotelSearchResult> searchHotelsClosestToCityCenter(Long cityId);
+    /** Update a hotel's editable fields (404 if missing or soft-deleted). */
+    Hotel updateHotel(Long id, UpdateHotelRequest request);
+
+    /**
+     * Q3: active hotels of a city, sorted by haversine distance to the city
+     * center. A null limit returns all of them.
+     */
+    List<HotelSearchResult> searchHotelsClosestToCityCenter(Long cityId, Integer limit);
 }

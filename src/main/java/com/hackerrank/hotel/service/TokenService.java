@@ -1,9 +1,9 @@
 package com.hackerrank.hotel.service;
 
+import com.hackerrank.hotel.config.JwtProperties;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -19,10 +19,9 @@ public class TokenService {
     private final JwtEncoder jwtEncoder;
     private final long expirationMinutes;
 
-    public TokenService(JwtEncoder jwtEncoder,
-                        @Value("${app.security.jwt.expiration-minutes}") long expirationMinutes) {
+    public TokenService(JwtEncoder jwtEncoder, JwtProperties properties) {
         this.jwtEncoder = jwtEncoder;
-        this.expirationMinutes = expirationMinutes;
+        this.expirationMinutes = properties.expirationMinutes();
     }
 
     public String generateToken(Authentication authentication) {

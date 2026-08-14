@@ -1,12 +1,14 @@
 package com.hackerrank.hotel.controller;
 
 import com.hackerrank.hotel.dto.HotelSearchResult;
+import com.hackerrank.hotel.dto.UpdateHotelRequest;
 import com.hackerrank.hotel.model.Hotel;
 import com.hackerrank.hotel.service.HotelService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,9 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -58,7 +63,23 @@ public class HotelController {
             @ApiResponse(responseCode = "404", description = "City not found")
     })
     @GetMapping("/search/{cityId}")
-    public ResponseEntity<List<HotelSearchResult>> searchHotels(@PathVariable @Positive Long cityId) {
-        return ResponseEntity.ok(hotelService.searchHotelsClosestToCityCenter(cityId));
+    public ResponseEntity<List<HotelSearchResult>> searchHotels(
+            @PathVariable @Positive Long cityId,
+            @RequestParam(name = "limit", required = false) @Positive Integer limit) {
+        return ResponseEntity.ok(hotelService.searchHotelsClosestToCityCenter(cityId, limit));
+    }
+
+    @Operation(summary = "Update a hotel",
+            description = "Replaces the editable fields of an active hotel. Requires the ADMIN role.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Updated hotel"),
+            @ApiResponse(responseCode = "400", description = "Invalid body"),
+            @ApiResponse(responseCode = "403", description = "Caller is not an admin"),
+            @ApiResponse(responseCode = "404", description = "Hotel missing or soft-deleted")
+    })
+    @PutMapping("/hotel/{id}")
+    public ResponseEntity<Hotel> updateHotel(@PathVariable @Positive Long id,
+                                             @Valid @RequestBody UpdateHotelRequest request) {
+        return ResponseEntity.ok(hotelService.updateHotel(id, request));
     }
 }

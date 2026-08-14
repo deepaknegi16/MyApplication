@@ -50,7 +50,8 @@ public class SecurityConfig {
                                 "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/hotel/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/hotel/**", "/search/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/hotel/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/hotel/**", "/search/**", "/city/**").hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
