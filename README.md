@@ -145,3 +145,25 @@ filter chain** (`@SpringBootTest` + `TestRestTemplate`):
 
 A quick manual smoke test after any change: start the app, log in, and hit the three
 endpoints in step 3 above — or click through them in Swagger UI.
+
+## CI (Jenkins)
+
+The [`Jenkinsfile`](Jenkinsfile) runs on every PR: **Unit tests** (`./mvnw clean test`,
+JUnit report published) then **Build** (`./mvnw package`, jar archived). It uses a
+`maven:3.9-eclipse-temurin-21` Docker agent; switch to `agent any` if your agents lack
+Docker but have JDK 21.
+
+One-time Jenkins setup to make PRs trigger builds:
+
+1. Install the **GitHub Branch Source** plugin (bundled with most Jenkins installs).
+2. **New Item → Multibranch Pipeline**, add a **GitHub** branch source pointing at
+   `deepaknegi16/MyApplication` with credentials (a GitHub personal access token).
+3. Under *Behaviors*, keep **Discover pull requests from origin** (build the merge of
+   PR head + target branch) and **Discover branches**.
+4. Add a webhook so builds start immediately: GitHub repo → Settings → Webhooks →
+   `https://<your-jenkins>/github-webhook/`, content type `application/json`,
+   event: *Pushes* and *Pull requests*. (Without a webhook, Jenkins falls back to
+   periodic scanning — set *Scan Repository Triggers* to e.g. every 15 minutes.)
+
+Jenkins then reports a commit status back to GitHub on each PR; you can make it required
+in branch protection rules.
