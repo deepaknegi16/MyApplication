@@ -248,7 +248,35 @@ public record UpdateHotelRequest(
 <div class="page-break"></div>
 
 <h2><span class="step-no">3</span>Service layer</h2>
-<p>All business rules live here, behind the <code>HotelService</code> interface. <code>@Transactional</code> wraps each method in a DB transaction; <code>@Cacheable</code>/<code>@CacheEvict</code> keep single-hotel reads cached and evict on writes.</p>
+<p>All business rules live here, behind the <code>HotelService</code> interface. The controller depends only on this interface — the implementation can be swapped (or mocked in tests) without touching the controller:</p>
+
+<span class="path">src/main/java/com/hackerrank/hotel/service/HotelService.java</span>
+<pre>
+public interface HotelService {
+
+    /** Q1: fetch a hotel by id (404 if missing or soft-deleted). */
+    Hotel getHotelById(Long id);
+
+    /** Create a new hotel in an existing city (404 if the city is unknown). */
+    Hotel createHotel(CreateHotelRequest request);
+
+    /** Update a hotel's editable fields (404 if missing or soft-deleted). */
+    Hotel updateHotel(Long id, UpdateHotelRequest request);
+
+    /** Q2: soft-delete — mark the hotel as deleted, keep the row. */
+    void deleteHotelById(Long id);
+
+    /** Q3: active hotels of a city, sorted by haversine distance to the
+        city center. A null limit returns all of them. */
+    List&lt;HotelSearchResult&gt; searchHotelsClosestToCityCenter(Long cityId, Integer limit);
+
+    /** Active hotels across all cities whose name contains the given text
+        (case-insensitive), sorted by name. */
+    List&lt;HotelNameSearchResult&gt; searchHotelsByName(String name, Integer limit);
+}
+</pre>
+
+<p>The implementation carries the Spring machinery: <code>@Transactional</code> wraps each method in a DB transaction; <code>@Cacheable</code>/<code>@CacheEvict</code> keep single-hotel reads cached and evict on writes.</p>
 
 <span class="path">src/main/java/com/hackerrank/hotel/service/HotelServiceImpl.java</span>
 <pre>
