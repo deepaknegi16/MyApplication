@@ -37,7 +37,7 @@
   }
   h2 .step-no {
     display: inline-block;
-    background: #1a1a1a; color: #fff;
+    background: #1565c0; color: #fff;
     border-radius: 50%;
     width: 6.5mm; height: 6.5mm; line-height: 6.5mm;
     text-align: center; font-size: 9.5pt;
@@ -47,8 +47,8 @@
   .path {
     font-family: "SF Mono", Menlo, Consolas, monospace;
     font-size: 8pt;
-    color: #444;
-    background: #f0f0f0;
+    color: #37474f;
+    background: #eceff1;
     border: 1px solid #ccc;
     border-bottom: none;
     padding: 1.2mm 2.5mm;
@@ -68,9 +68,35 @@
     page-break-inside: avoid;
   }
   code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.92em; background: #f0f0f0; padding: 0 1mm; }
+  /* ---- syntax coloring (applied by the tiny script at the bottom) ---- */
+  pre .k   { color: #1565c0; font-weight: bold; }   /* keywords            */
+  pre .ann { color: #e65100; }                      /* @annotations        */
+  pre .str { color: #2e7d32; }                      /* "string literals"   */
+  pre .com { color: #757575; font-style: italic; }  /* comments            */
+
+  /* ---- imports appendix ---- */
+  .imp-legend { font-size: 9pt; margin: 2mm 0 4mm; }
+  .imp-legend span { font-family: Menlo, Consolas, monospace; font-size: 8pt; font-weight: bold; }
+  .imports-cols { column-count: 2; column-gap: 6mm; }
+  .imp-block { break-inside: avoid; page-break-inside: avoid; margin-bottom: 3.5mm; }
+  .imp-block h3 {
+    font-size: 9pt; margin: 0 0 1mm;
+    font-family: Menlo, Consolas, monospace;
+    border-bottom: 1px solid #bbb; padding-bottom: 0.7mm;
+  }
+  pre.imports {
+    font-size: 7.3pt; line-height: 1.5;
+    border: none; background: none; padding: 0; margin: 0;
+  }
+  .imp-java    { color: #1565c0; }  /* java.*                    */
+  .imp-jakarta { color: #e65100; }  /* jakarta.*                 */
+  .imp-spring  { color: #2e7d32; }  /* org.springframework.*     */
+  .imp-project { color: #6a1b9a; }  /* com.hackerrank.hotel.*    */
+  .imp-other   { color: #00838f; }  /* io.swagger.*, org.slf4j.* */
+
   .note {
     background: #f6f6f6;
-    border-left: 3px solid #1a1a1a;
+    border-left: 3px solid #1565c0;
     padding: 2mm 3mm;
     font-size: 9.5pt;
     margin: 3mm 0;
@@ -82,11 +108,18 @@
   .flow-row { display: flex; align-items: stretch; }
   .flow-box {
     flex: 1;
-    border: 1.5px solid #1a1a1a;
+    border: 1px solid #999;
+    border-left: 4px solid #546e7a;
+    background: #fafafa;
     padding: 2mm 3mm;
     margin: 0;
     page-break-inside: avoid;
   }
+  .flow-box.layer-security   { border-left-color: #c62828; background: #fdf3f3; }
+  .flow-box.layer-controller { border-left-color: #1565c0; background: #f2f7fd; }
+  .flow-box.layer-service    { border-left-color: #2e7d32; background: #f3f9f3; }
+  .flow-box.layer-repo       { border-left-color: #e65100; background: #fdf7f0; }
+  .flow-box.layer-db         { border-left-color: #6a1b9a; background: #f9f3fc; }
   .flow-box .layer { font-weight: bold; font-size: 10pt; }
   .flow-box .cls { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8pt; color: #333; }
   .flow-box .role { font-size: 8.5pt; color: #555; margin-top: 0.5mm; }
@@ -130,27 +163,27 @@
     <div class="role">curl / Swagger UI — sends JSON + <code>Authorization: Bearer &lt;JWT&gt;</code></div>
   </div>
   <div class="flow-arrow">▼ <small>HTTP request</small></div>
-  <div class="flow-box">
+  <div class="flow-box layer-security">
     <span class="layer">Security filter chain</span> <span class="cls">— SecurityConfig</span>
     <div class="role">Validates the JWT, extracts roles. GET needs USER/ADMIN; POST, PUT, DELETE need ADMIN. Fails → 401/403 before any controller code runs.</div>
   </div>
   <div class="flow-arrow">▼</div>
-  <div class="flow-box">
+  <div class="flow-box layer-controller">
     <span class="layer">Controller</span> <span class="cls">— HotelController (@RestController)</span>
     <div class="role">Maps URL + HTTP method to a Java method, validates input (@Valid, @Positive), builds the HTTP response. No business logic.</div>
   </div>
   <div class="flow-arrow">▼ <small>Java method call</small></div>
-  <div class="flow-box">
+  <div class="flow-box layer-service">
     <span class="layer">Service</span> <span class="cls">— HotelServiceImpl (@Service, @Transactional)</span>
     <div class="role">Business rules: soft-delete filtering, city must exist, distance sorting, caching, events. Throws ResourceNotFoundException → 404.</div>
   </div>
   <div class="flow-arrow">▼</div>
-  <div class="flow-box">
+  <div class="flow-box layer-repo">
     <span class="layer">Repository</span> <span class="cls">— HotelRepository (Spring Data JPA)</span>
     <div class="role">Interface only — Spring generates the SQL from method names or @Query. CRUD via JpaRepository.</div>
   </div>
   <div class="flow-arrow">▼ <small>JDBC / SQL</small></div>
-  <div class="flow-box">
+  <div class="flow-box layer-db">
     <span class="layer">Database</span> <span class="cls">— H2 in-memory (hotel, city tables)</span>
     <div class="role">Schema generated from the @Entity classes; seeded by data.sql on startup.</div>
   </div>
@@ -451,9 +484,160 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 }
 </pre>
 
+<div class="page-break"></div>
+
+<h2><span class="step-no">7</span>Appendix — every import, per class</h2>
+<p class="imp-legend">Color-coded by where the package comes from:&nbsp;
+  <span class="imp-java">java.*</span> JDK &nbsp;·&nbsp;
+  <span class="imp-jakarta">jakarta.*</span> Jakarta EE (validation, persistence) &nbsp;·&nbsp;
+  <span class="imp-spring">org.springframework.*</span> Spring &nbsp;·&nbsp;
+  <span class="imp-project">com.hackerrank.hotel.*</span> this project &nbsp;·&nbsp;
+  <span class="imp-other">io.swagger.* / org.slf4j.*</span> other libraries
+</p>
+
+<div class="imports-cols">
+
+<div class="imp-block">
+<h3>controller/HotelController.java</h3>
+<pre class="imports"><span class="imp-project">import com.hackerrank.hotel.dto.CreateHotelRequest;
+import com.hackerrank.hotel.dto.HotelNameSearchResult;
+import com.hackerrank.hotel.dto.HotelSearchResult;
+import com.hackerrank.hotel.dto.UpdateHotelRequest;
+import com.hackerrank.hotel.model.Hotel;
+import com.hackerrank.hotel.service.HotelService;</span>
+<span class="imp-other">import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;</span>
+<span class="imp-jakarta">import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;</span>
+<span class="imp-java">import java.net.URI;
+import java.util.List;</span>
+<span class="imp-spring">import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;</span></pre>
+</div>
+
+<div class="imp-block">
+<h3>service/HotelService.java</h3>
+<pre class="imports"><span class="imp-project">import com.hackerrank.hotel.dto.CreateHotelRequest;
+import com.hackerrank.hotel.dto.HotelNameSearchResult;
+import com.hackerrank.hotel.dto.HotelSearchResult;
+import com.hackerrank.hotel.dto.UpdateHotelRequest;
+import com.hackerrank.hotel.model.Hotel;</span>
+<span class="imp-java">import java.util.List;</span></pre>
+</div>
+
+<div class="imp-block">
+<h3>service/HotelServiceImpl.java</h3>
+<pre class="imports"><span class="imp-project">import com.hackerrank.hotel.dto.CreateHotelRequest;
+import com.hackerrank.hotel.dto.HotelNameSearchResult;
+import com.hackerrank.hotel.dto.HotelSearchResult;
+import com.hackerrank.hotel.dto.UpdateHotelRequest;
+import com.hackerrank.hotel.event.HotelDeletedEvent;
+import com.hackerrank.hotel.exception.ResourceNotFoundException;
+import com.hackerrank.hotel.model.City;
+import com.hackerrank.hotel.model.Hotel;
+import com.hackerrank.hotel.repository.CityRepository;
+import com.hackerrank.hotel.repository.HotelRepository;</span>
+<span class="imp-java">import java.util.Comparator;
+import java.util.List;</span>
+<span class="imp-spring">import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;</span></pre>
+</div>
+
+<div class="imp-block">
+<h3>repository/HotelRepository.java</h3>
+<pre class="imports"><span class="imp-project">import com.hackerrank.hotel.model.Hotel;</span>
+<span class="imp-java">import java.util.List;</span>
+<span class="imp-spring">import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;</span></pre>
+</div>
+
+<div class="imp-block">
+<h3>model/Hotel.java</h3>
+<pre class="imports"><span class="imp-jakarta">import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;</span>
+<span class="imp-java">import java.time.Instant;
+import java.time.LocalDateTime;</span>
+<span class="imp-spring">import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;</span></pre>
+</div>
+
+<div class="imp-block">
+<h3>dto/CreateHotelRequest.java <small>(UpdateHotelRequest: same minus Positive)</small></h3>
+<pre class="imports"><span class="imp-jakarta">import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;</span>
+<span class="imp-java">import java.time.LocalDateTime;</span></pre>
+</div>
+
+<div class="imp-block">
+<h3>exception/GlobalExceptionHandler.java</h3>
+<pre class="imports"><span class="imp-other">import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;</span>
+<span class="imp-spring">import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;</span></pre>
+</div>
+
+</div>
+
 <footer>
   Hotel Service · Spring Boot 4.1 / Java 21 · Print with your browser (Cmd/Ctrl+P) — the page is formatted for A4.
 </footer>
+
+<script>
+// Lightweight syntax coloring for the code blocks (runs once on load; the
+// imports appendix is colored by hand, so it is skipped here).
+document.querySelectorAll('pre:not(.imports)').forEach(function (pre) {
+  var src = pre.textContent
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  var stash = [];
+  // protect comments and string literals first so keywords inside them stay plain
+  src = src.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:[^"\\]|\\.)*"/g, function (m) {
+    var cls = m.charAt(0) === '"' ? 'str' : 'com';
+    stash.push('<span class="' + cls + '">' + m + '</span>');
+    return '\u0000' + (stash.length - 1) + '\u0000';
+  });
+  src = src.replace(/@[A-Za-z]+/g, '<span class="ann">$&</span>');
+  src = src.replace(/\b(public|private|protected|final|class|interface|record|enum|extends|implements|return|new|void|int|double|boolean|long|static|throws|throw|if|else|null|true|false|var)\b/g,
+      '<span class="k">$1</span>');
+  src = src.replace(/\u0000(\d+)\u0000/g, function (_, i) { return stash[i]; });
+  pre.innerHTML = src;
+});
+</script>
 
 </body>
 </html>
