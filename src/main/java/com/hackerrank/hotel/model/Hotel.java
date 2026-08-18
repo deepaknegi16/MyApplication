@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -34,6 +35,11 @@ public class Hotel {
 
     // soft-delete flag: a "deleted" hotel stays in the database
     private boolean deleted;
+
+    // client-supplied timestamp sent in the create/update request body,
+    // unlike createdAt/updatedAt which are stamped by JPA auditing
+    @Column(name = "time")
+    private LocalDateTime time;
 
     @ManyToOne
     @JoinColumn(name = "city_id")
@@ -113,6 +119,14 @@ public class Hotel {
 
     public void setCity(City city) {
         this.city = city;
+    }
+
+    public LocalDateTime getTime() {
+        return time;
+    }
+
+    public void setTime(LocalDateTime time) {
+        this.time = time;
     }
 
     public Instant getCreatedAt() {

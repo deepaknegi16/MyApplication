@@ -1,5 +1,6 @@
 package com.hackerrank.hotel.service;
 
+import com.hackerrank.hotel.dto.CreateHotelRequest;
 import com.hackerrank.hotel.dto.HotelNameSearchResult;
 import com.hackerrank.hotel.dto.HotelSearchResult;
 import com.hackerrank.hotel.dto.UpdateHotelRequest;
@@ -13,6 +14,9 @@ public interface HotelService {
 
     /** Q2: soft-delete — mark the hotel as deleted, keep the row. */
     void deleteHotelById(Long id);
+
+    /** Create a new hotel in an existing city (404 if the city is unknown). */
+    Hotel createHotel(CreateHotelRequest request);
 
     /** Update a hotel's editable fields (404 if missing or soft-deleted). */
     Hotel updateHotel(Long id, UpdateHotelRequest request);

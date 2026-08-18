@@ -1,5 +1,6 @@
 package com.hackerrank.hotel.controller;
 
+import com.hackerrank.hotel.dto.CreateHotelRequest;
 import com.hackerrank.hotel.dto.HotelNameSearchResult;
 import com.hackerrank.hotel.dto.HotelSearchResult;
 import com.hackerrank.hotel.dto.UpdateHotelRequest;
@@ -11,12 +12,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -82,6 +85,21 @@ public class HotelController {
             @PathVariable @Positive Long cityId,
             @RequestParam(name = "limit", required = false) @Positive Integer limit) {
         return ResponseEntity.ok(hotelService.searchHotelsClosestToCityCenter(cityId, limit));
+    }
+
+    @Operation(summary = "Create a new hotel",
+            description = "Adds a hotel to an existing city, including the client-supplied time. "
+                    + "Requires the ADMIN role.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Hotel created"),
+            @ApiResponse(responseCode = "400", description = "Invalid body"),
+            @ApiResponse(responseCode = "403", description = "Caller is not an admin"),
+            @ApiResponse(responseCode = "404", description = "City not found")
+    })
+    @PostMapping("/hotel")
+    public ResponseEntity<Hotel> createHotel(@Valid @RequestBody CreateHotelRequest request) {
+        Hotel created = hotelService.createHotel(request);
+        return ResponseEntity.created(URI.create("/hotel/" + created.getId())).body(created);
     }
 
     @Operation(summary = "Update a hotel",

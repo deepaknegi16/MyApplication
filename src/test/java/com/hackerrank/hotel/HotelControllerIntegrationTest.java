@@ -154,10 +154,11 @@ class HotelControllerIntegrationTest {
         mockMvc.perform(put("/hotel/3")
                         .header(HttpHeaders.AUTHORIZATION, bearer(adminToken))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Radisson Blu Dwarka Renovated\",\"latitude\":28.5823,\"longitude\":77.05,\"rating\":5}"))
+                        .content("{\"name\":\"Radisson Blu Dwarka Renovated\",\"latitude\":28.5823,\"longitude\":77.05,\"rating\":5,\"time\":\"2026-08-18T14:30:00\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Radisson Blu Dwarka Renovated"))
                 .andExpect(jsonPath("$.rating").value(5))
+                .andExpect(jsonPath("$.time").value("2026-08-18T14:30:00"))
                 .andExpect(jsonPath("$.createdAt").exists());
 
         // cache was evicted, so a fresh GET sees the update
@@ -171,7 +172,7 @@ class HotelControllerIntegrationTest {
         mockMvc.perform(put("/hotel/1")
                         .header(HttpHeaders.AUTHORIZATION, bearer(userToken))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Hacked\",\"latitude\":0,\"longitude\":0,\"rating\":1}"))
+                        .content("{\"name\":\"Hacked\",\"latitude\":0,\"longitude\":0,\"rating\":1,\"time\":\"2026-08-18T14:30:00\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -181,8 +182,62 @@ class HotelControllerIntegrationTest {
         mockMvc.perform(put("/hotel/1")
                         .header(HttpHeaders.AUTHORIZATION, bearer(adminToken))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"\",\"latitude\":28.6,\"longitude\":77.2,\"rating\":9}"))
+                        .content("{\"name\":\"\",\"latitude\":28.6,\"longitude\":77.2,\"rating\":9,\"time\":\"2026-08-18T14:30:00\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    // ---------- POST /hotel ----------
+
+    @Test
+    void adminCanCreateHotelWithTime() throws Exception {
+        String body = mockMvc.perform(post("/hotel")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"The Oberoi\",\"latitude\":28.6035,\"longitude\":77.2405,"
+                                + "\"rating\":5,\"cityId\":1,\"time\":\"2026-08-18T09:15:00\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.name").value("The Oberoi"))
+                .andExpect(jsonPath("$.time").value("2026-08-18T09:15:00"))
+                .andReturn().getResponse().getContentAsString();
+
+        // the created hotel is readable and the time was persisted
+        long id = objectMapper.readTree(body).get("id").asLong();
+        mockMvc.perform(get("/hotel/" + id).header(HttpHeaders.AUTHORIZATION, bearer(userToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("The Oberoi"))
+                .andExpect(jsonPath("$.time").value("2026-08-18T09:15:00"));
+    }
+
+    @Test
+    void createRequiresAdminRole() throws Exception {
+        mockMvc.perform(post("/hotel")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(userToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Sneaky Hotel\",\"latitude\":28.6,\"longitude\":77.2,"
+                                + "\"rating\":3,\"cityId\":1,\"time\":\"2026-08-18T09:15:00\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createWithoutTimeReturns400() throws Exception {
+        // time is @NotNull, so omitting it fails validation
+        mockMvc.perform(post("/hotel")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"No Time Hotel\",\"latitude\":28.6,\"longitude\":77.2,"
+                                + "\"rating\":3,\"cityId\":1}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createInUnknownCityReturns404() throws Exception {
+        mockMvc.perform(post("/hotel")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Nowhere Inn\",\"latitude\":28.6,\"longitude\":77.2,"
+                                + "\"rating\":3,\"cityId\":9999,\"time\":\"2026-08-18T09:15:00\"}"))
+                .andExpect(status().isNotFound());
     }
 
     // ---------- GET /city ----------

@@ -25,7 +25,7 @@ import org.springframework.security.web.SecurityFilterChain;
  * - Every other API call must carry "Authorization: Bearer <token>", validated by
  *   Spring Security's OAuth2 resource server against the same signing key.
  * - Reads (GET /hotel, /search) need any authenticated user (USER or ADMIN);
- *   DELETE /hotel needs ADMIN. Roles travel inside the token's "roles" claim.
+ *   POST/PUT/DELETE /hotel need ADMIN. Roles travel inside the token's "roles" claim.
  * - Swagger UI, OpenAPI docs, H2 console and health/info probes are public.
  * - Credentials and the JWT secret come from properties so production can inject
  *   them via environment variables (APP_SECURITY_*); never commit real secrets.
@@ -49,6 +49,7 @@ public class SecurityConfig {
                                 "/h2-console/**",
                                 "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/hotel", "/hotel/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/hotel/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/hotel/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/hotel/**", "/search/**", "/city/**").hasAnyRole("USER", "ADMIN")

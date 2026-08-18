@@ -1,5 +1,6 @@
 package com.hackerrank.hotel.service;
 
+import com.hackerrank.hotel.dto.CreateHotelRequest;
 import com.hackerrank.hotel.dto.HotelNameSearchResult;
 import com.hackerrank.hotel.dto.HotelSearchResult;
 import com.hackerrank.hotel.dto.UpdateHotelRequest;
@@ -63,6 +64,16 @@ public class HotelServiceImpl implements HotelService {
 
     @Override
     @Transactional
+    public Hotel createHotel(CreateHotelRequest request) {
+        City city = cityRepository.findById(request.cityId())
+                .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + request.cityId()));
+        Hotel hotel = new Hotel(request.name(), request.latitude(), request.longitude(), request.rating(), city);
+        hotel.setTime(request.time());
+        return hotelRepository.save(hotel);
+    }
+
+    @Override
+    @Transactional
     @CacheEvict(cacheNames = "hotels", key = "#id")
     public Hotel updateHotel(Long id, UpdateHotelRequest request) {
         Hotel hotel = hotelRepository.findById(id)
@@ -72,6 +83,7 @@ public class HotelServiceImpl implements HotelService {
         hotel.setLatitude(request.latitude());
         hotel.setLongitude(request.longitude());
         hotel.setRating(request.rating());
+        hotel.setTime(request.time());
         // no explicit save needed: dirty checking flushes the UPDATE at commit
         return hotel;
     }

@@ -41,7 +41,7 @@ Every hotel endpoint requires a Bearer token. Two demo users are configured in
 | User | Password | Role | Can do |
 |---|---|---|---|
 | `user` | `user123` | ROLE_USER | GET hotel, search, list cities |
-| `admin` | `admin123` | ROLE_ADMIN | everything + DELETE / PUT hotel + full actuator |
+| `admin` | `admin123` | ROLE_ADMIN | everything + POST / DELETE / PUT hotel + full actuator |
 
 ```bash
 TOKEN=$(curl -s -X POST localhost:8080/auth/login \
@@ -70,10 +70,16 @@ curl -H "Authorization: Bearer $TOKEN" localhost:8080/city
 # Q2 — soft-delete a hotel (admin only; a USER token gets 403)
 curl -X DELETE -H "Authorization: Bearer $ADMIN" localhost:8080/hotel/4
 
-# Update a hotel (admin only; body is validated — rating 1–5, lat/lon in range)
+# Create a hotel (admin only; 201 + Location header; time is a client-supplied
+# ISO-8601 timestamp stored in the DB, separate from the automatic createdAt/updatedAt)
+curl -X POST localhost:8080/hotel \
+  -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' \
+  -d '{"name":"New Hotel","latitude":28.60,"longitude":77.20,"rating":4,"cityId":1,"time":"2026-08-18T09:15:00"}'
+
+# Update a hotel (admin only; body is validated — rating 1–5, lat/lon in range, time required)
 curl -X PUT localhost:8080/hotel/1 \
   -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' \
-  -d '{"name":"Renamed Hotel","latitude":40.71,"longitude":-74.0,"rating":5}'
+  -d '{"name":"Renamed Hotel","latitude":40.71,"longitude":-74.0,"rating":5,"time":"2026-08-18T09:15:00"}'
 ```
 
 Errors come back as RFC 7807 `application/problem+json`, e.g. `GET /hotel/999` → 404 with a
