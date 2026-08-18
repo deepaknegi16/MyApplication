@@ -8,10 +8,79 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
-public record UpdateHotelRequest(
-        @NotBlank String name,
-        @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") Double latitude,
-        @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
-        @Min(1) @Max(5) int rating,
-        @NotNull LocalDateTime time) {
+public class UpdateHotelRequest {
+
+    @NotBlank
+    private String name;
+
+    @NotNull
+    @DecimalMin("-90.0")
+    @DecimalMax("90.0")
+    private Double latitude;
+
+    @NotNull
+    @DecimalMin("-180.0")
+    @DecimalMax("180.0")
+    private Double longitude;
+
+    @Min(1)
+    @Max(5)
+    private int rating;
+
+    @NotNull
+    private LocalDateTime time;
+
+    // Jackson needs a no-args constructor to build the object before
+    // filling in the fields via the setters
+    public UpdateHotelRequest() {
+    }
+
+    public UpdateHotelRequest(String name, Double latitude, Double longitude,
+                              int rating, LocalDateTime time) {
+        this.name = name;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.rating = rating;
+        this.time = time;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
+    }
+
+    public int getRating() {
+        return rating;
+    }
+
+    public void setRating(int rating) {
+        this.rating = rating;
+    }
+
+    public LocalDateTime getTime() {
+        return time;
+    }
+
+    public void setTime(LocalDateTime time) {
+        this.time = time;
+    }
 }

@@ -182,6 +182,7 @@ public class HotelController {
 
     private final HotelService hotelService;          // injected via constructor
 
+    @Autowired
     public HotelController(HotelService hotelService) {
         this.hotelService = hotelService;
     }
@@ -225,24 +226,37 @@ public class HotelController {
 }
 </pre>
 
-<p>The request bodies are immutable Java records whose bean-validation constraints run automatically because of <code>@Valid</code>:</p>
+<p>The request bodies are plain Java DTO classes: Jackson builds them through the no-args constructor and setters, and the bean-validation constraints on the fields run automatically because of <code>@Valid</code>:</p>
 
-<span class="path">src/main/java/com/hackerrank/hotel/dto/CreateHotelRequest.java · UpdateHotelRequest.java</span>
+<span class="path">src/main/java/com/hackerrank/hotel/dto/CreateHotelRequest.java (UpdateHotelRequest is the same minus cityId)</span>
 <pre>
-public record CreateHotelRequest(
-        @NotBlank String name,
-        @NotNull @DecimalMin("-90.0")  @DecimalMax("90.0")  Double latitude,
-        @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
-        @Min(1) @Max(5) int rating,
-        @NotNull @Positive Long cityId,
-        @NotNull LocalDateTime time) { }        // client-supplied, stored in the DB
+public class CreateHotelRequest {
 
-public record UpdateHotelRequest(
-        @NotBlank String name,
-        @NotNull @DecimalMin("-90.0")  @DecimalMax("90.0")  Double latitude,
-        @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
-        @Min(1) @Max(5) int rating,
-        @NotNull LocalDateTime time) { }
+    @NotBlank
+    private String name;
+
+    @NotNull @DecimalMin("-90.0") @DecimalMax("90.0")
+    private Double latitude;
+
+    @NotNull @DecimalMin("-180.0") @DecimalMax("180.0")
+    private Double longitude;
+
+    @Min(1) @Max(5)
+    private int rating;
+
+    @NotNull @Positive
+    private Long cityId;
+
+    @NotNull
+    private LocalDateTime time;             // client-supplied, stored in the DB
+
+    public CreateHotelRequest() { }         // required by Jackson
+
+    // getters and setters for every field omitted for brevity
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    // ...
+}
 </pre>
 
 <div class="page-break"></div>

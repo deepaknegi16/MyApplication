@@ -12,6 +12,7 @@ import com.hackerrank.hotel.repository.CityRepository;
 import com.hackerrank.hotel.repository.HotelRepository;
 import java.util.Comparator;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -28,6 +29,7 @@ public class HotelServiceImpl implements HotelService {
     private final DistanceCalculator distanceCalculator;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Autowired
     public HotelServiceImpl(HotelRepository hotelRepository,
                             CityRepository cityRepository,
                             @Qualifier("haversineDistanceCalculator") DistanceCalculator distanceCalculator,
@@ -65,10 +67,10 @@ public class HotelServiceImpl implements HotelService {
     @Override
     @Transactional
     public Hotel createHotel(CreateHotelRequest request) {
-        City city = cityRepository.findById(request.cityId())
-                .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + request.cityId()));
-        Hotel hotel = new Hotel(request.name(), request.latitude(), request.longitude(), request.rating(), city);
-        hotel.setTime(request.time());
+        City city = cityRepository.findById(request.getCityId())
+                .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + request.getCityId()));
+        Hotel hotel = new Hotel(request.getName(), request.getLatitude(), request.getLongitude(), request.getRating(), city);
+        hotel.setTime(request.getTime());
         return hotelRepository.save(hotel);
     }
 
@@ -79,11 +81,11 @@ public class HotelServiceImpl implements HotelService {
         Hotel hotel = hotelRepository.findById(id)
                 .filter(h -> !h.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Hotel not found with id: " + id));
-        hotel.setName(request.name());
-        hotel.setLatitude(request.latitude());
-        hotel.setLongitude(request.longitude());
-        hotel.setRating(request.rating());
-        hotel.setTime(request.time());
+        hotel.setName(request.getName());
+        hotel.setLatitude(request.getLatitude());
+        hotel.setLongitude(request.getLongitude());
+        hotel.setRating(request.getRating());
+        hotel.setTime(request.getTime());
         // no explicit save needed: dirty checking flushes the UPDATE at commit
         return hotel;
     }
