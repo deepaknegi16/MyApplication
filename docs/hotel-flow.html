@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotel Service — Request Flow (Controller → Service → Repository)</title>
+<style>
+  /* ---- A4 print setup ---- */
+  @page {
+    size: A4;
+    margin: 14mm 14mm 16mm 14mm;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    color: #1a1a1a;
+    background: #fff;
+    margin: 0 auto;
+    max-width: 182mm; /* A4 width minus margins, so screen preview matches print */
+    padding: 10mm 0;
+  }
+  h1 {
+    font-size: 17pt;
+    margin: 0 0 2mm;
+    border-bottom: 2.5px solid #1a1a1a;
+    padding-bottom: 2mm;
+  }
+  .subtitle { font-size: 10pt; color: #555; margin: 0 0 6mm; }
+  h2 {
+    font-size: 12.5pt;
+    margin: 7mm 0 2.5mm;
+    border-bottom: 1px solid #999;
+    padding-bottom: 1mm;
+  }
+  h2 .step-no {
+    display: inline-block;
+    background: #1a1a1a; color: #fff;
+    border-radius: 50%;
+    width: 6.5mm; height: 6.5mm; line-height: 6.5mm;
+    text-align: center; font-size: 9.5pt;
+    margin-right: 2mm;
+  }
+  p { margin: 1.5mm 0 2.5mm; }
+  .path {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8pt;
+    color: #444;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-bottom: none;
+    padding: 1.2mm 2.5mm;
+    display: block;
+    margin-top: 3mm;
+  }
+  pre {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8pt;
+    line-height: 1.42;
+    background: #fafafa;
+    border: 1px solid #ccc;
+    padding: 2.5mm 3mm;
+    margin: 0 0 4mm;
+    white-space: pre;
+    overflow-x: auto;
+    page-break-inside: avoid;
+  }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.92em; background: #f0f0f0; padding: 0 1mm; }
+  .note {
+    background: #f6f6f6;
+    border-left: 3px solid #1a1a1a;
+    padding: 2mm 3mm;
+    font-size: 9.5pt;
+    margin: 3mm 0;
+    page-break-inside: avoid;
+  }
+
+  /* ---- flow diagram ---- */
+  .flow { margin: 5mm 0; page-break-inside: avoid; }
+  .flow-row { display: flex; align-items: stretch; }
+  .flow-box {
+    flex: 1;
+    border: 1.5px solid #1a1a1a;
+    padding: 2mm 3mm;
+    margin: 0;
+    page-break-inside: avoid;
+  }
+  .flow-box .layer { font-weight: bold; font-size: 10pt; }
+  .flow-box .cls { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8pt; color: #333; }
+  .flow-box .role { font-size: 8.5pt; color: #555; margin-top: 0.5mm; }
+  .flow-arrow {
+    text-align: center;
+    font-size: 11pt;
+    line-height: 1.1;
+    padding: 0.8mm 0;
+    color: #1a1a1a;
+  }
+  .flow-arrow small { font-size: 7.5pt; color: #666; font-family: Menlo, Consolas, monospace; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 9pt; margin: 2mm 0 4mm; }
+  th, td { border: 1px solid #999; padding: 1.5mm 2.5mm; text-align: left; vertical-align: top; }
+  th { background: #eee; }
+  td code { background: none; padding: 0; }
+
+  .page-break { page-break-before: always; }
+  footer {
+    margin-top: 8mm; padding-top: 2mm;
+    border-top: 1px solid #999;
+    font-size: 8pt; color: #777;
+  }
+  @media print {
+    body { padding: 0; max-width: none; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Hotel Service — Request Flow</h1>
+<p class="subtitle">Spring Boot layered architecture: Controller → Service → Repository → Database &nbsp;·&nbsp; repo: deepaknegi16/MyApplication</p>
+
+<h2><span class="step-no">0</span>The big picture</h2>
+<p>Every hotel request passes through the same layers. Each layer has one job and only talks to the layer directly below it — the controller never touches the repository, and the service knows nothing about HTTP.</p>
+
+<div class="flow">
+  <div class="flow-box">
+    <span class="layer">Client</span>
+    <div class="role">curl / Swagger UI — sends JSON + <code>Authorization: Bearer &lt;JWT&gt;</code></div>
+  </div>
+  <div class="flow-arrow">▼ <small>HTTP request</small></div>
+  <div class="flow-box">
+    <span class="layer">Security filter chain</span> <span class="cls">— SecurityConfig</span>
+    <div class="role">Validates the JWT, extracts roles. GET needs USER/ADMIN; POST, PUT, DELETE need ADMIN. Fails → 401/403 before any controller code runs.</div>
+  </div>
+  <div class="flow-arrow">▼</div>
+  <div class="flow-box">
+    <span class="layer">Controller</span> <span class="cls">— HotelController (@RestController)</span>
+    <div class="role">Maps URL + HTTP method to a Java method, validates input (@Valid, @Positive), builds the HTTP response. No business logic.</div>
+  </div>
+  <div class="flow-arrow">▼ <small>Java method call</small></div>
+  <div class="flow-box">
+    <span class="layer">Service</span> <span class="cls">— HotelServiceImpl (@Service, @Transactional)</span>
+    <div class="role">Business rules: soft-delete filtering, city must exist, distance sorting, caching, events. Throws ResourceNotFoundException → 404.</div>
+  </div>
+  <div class="flow-arrow">▼</div>
+  <div class="flow-box">
+    <span class="layer">Repository</span> <span class="cls">— HotelRepository (Spring Data JPA)</span>
+    <div class="role">Interface only — Spring generates the SQL from method names or @Query. CRUD via JpaRepository.</div>
+  </div>
+  <div class="flow-arrow">▼ <small>JDBC / SQL</small></div>
+  <div class="flow-box">
+    <span class="layer">Database</span> <span class="cls">— H2 in-memory (hotel, city tables)</span>
+    <div class="role">Schema generated from the @Entity classes; seeded by data.sql on startup.</div>
+  </div>
+</div>
+
+<h2><span class="step-no">1</span>Example walk-through: <code>POST /hotel</code></h2>
+<table>
+  <tr><th style="width:22%">Layer</th><th>What happens</th></tr>
+  <tr><td>Client</td><td>Sends JSON body <code>{"name":"The Oberoi", "latitude":28.60, "longitude":77.24, "rating":5, "cityId":1, "time":"2026-08-18T09:15:00"}</code> with an admin JWT.</td></tr>
+  <tr><td>Security</td><td><code>POST /hotel</code> requires <code>ROLE_ADMIN</code> — a USER token stops here with 403.</td></tr>
+  <tr><td>Controller</td><td>Jackson turns the JSON into a <code>CreateHotelRequest</code> record; <code>@Valid</code> runs the constraints (rating 1–5, lat/lon in range, time not null). Invalid → 400 problem-detail.</td></tr>
+  <tr><td>Service</td><td>Loads the <code>City</code> by <code>cityId</code> — unknown city → <code>ResourceNotFoundException</code> → 404. Builds the <code>Hotel</code> entity, sets the client-supplied <code>time</code>.</td></tr>
+  <tr><td>Repository</td><td><code>save(hotel)</code> → <code>INSERT INTO hotel …</code>; the DB generates the id; JPA auditing stamps <code>createdAt</code>/<code>updatedAt</code>.</td></tr>
+  <tr><td>Controller</td><td>Returns <b>201 Created</b> with a <code>Location: /hotel/{id}</code> header and the saved hotel as JSON.</td></tr>
+</table>
+
+<div class="note"><b>Errors take a shortcut:</b> any exception thrown below the controller is caught by <code>GlobalExceptionHandler</code> (@RestControllerAdvice) and converted into an RFC 7807 <code>application/problem+json</code> response — the controller never handles errors itself.</div>
+
+<div class="page-break"></div>
+
+<h2><span class="step-no">2</span>Controller layer</h2>
+<p>Thin HTTP adapter: annotations map routes, constraints validate input, and every method is one delegation to the service. (Swagger <code>@Operation</code>/<code>@ApiResponses</code> annotations omitted here for brevity.)</p>
+
+<span class="path">src/main/java/com/hackerrank/hotel/controller/HotelController.java</span>
+<pre>
+@RestController
+@Validated
+public class HotelController {
+
+    private final HotelService hotelService;          // injected via constructor
+
+    public HotelController(HotelService hotelService) {
+        this.hotelService = hotelService;
+    }
+
+    @GetMapping("/hotel/{id}")                        // Q1: fetch one hotel
+    public ResponseEntity&lt;Hotel&gt; getHotelById(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(hotelService.getHotelById(id));
+    }
+
+    @PostMapping("/hotel")                            // create (ADMIN) — 201 + Location
+    public ResponseEntity&lt;Hotel&gt; createHotel(@Valid @RequestBody CreateHotelRequest request) {
+        Hotel created = hotelService.createHotel(request);
+        return ResponseEntity.created(URI.create("/hotel/" + created.getId())).body(created);
+    }
+
+    @PutMapping("/hotel/{id}")                        // update (ADMIN)
+    public ResponseEntity&lt;Hotel&gt; updateHotel(@PathVariable @Positive Long id,
+                                             @Valid @RequestBody UpdateHotelRequest request) {
+        return ResponseEntity.ok(hotelService.updateHotel(id, request));
+    }
+
+    @DeleteMapping("/hotel/{id}")                     // Q2: soft-delete (ADMIN) — 204
+    public ResponseEntity&lt;Void&gt; deleteHotelById(@PathVariable @Positive Long id) {
+        hotelService.deleteHotelById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/search/{cityId}")                   // Q3: nearest-first city search
+    public ResponseEntity&lt;List&lt;HotelSearchResult&gt;&gt; searchHotels(
+            @PathVariable @Positive Long cityId,
+            @RequestParam(name = "limit", required = false) @Positive Integer limit) {
+        return ResponseEntity.ok(hotelService.searchHotelsClosestToCityCenter(cityId, limit));
+    }
+
+    @GetMapping("/hotel/search")                      // name search across all cities
+    public ResponseEntity&lt;List&lt;HotelNameSearchResult&gt;&gt; searchHotelsByName(
+            @RequestParam(name = "name", required = false) String name,
+            @RequestParam(name = "limit", required = false) @Positive Integer limit) {
+        return ResponseEntity.ok(hotelService.searchHotelsByName(name, limit));
+    }
+}
+</pre>
+
+<p>The request bodies are immutable Java records whose bean-validation constraints run automatically because of <code>@Valid</code>:</p>
+
+<span class="path">src/main/java/com/hackerrank/hotel/dto/CreateHotelRequest.java · UpdateHotelRequest.java</span>
+<pre>
+public record CreateHotelRequest(
+        @NotBlank String name,
+        @NotNull @DecimalMin("-90.0")  @DecimalMax("90.0")  Double latitude,
+        @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
+        @Min(1) @Max(5) int rating,
+        @NotNull @Positive Long cityId,
+        @NotNull LocalDateTime time) { }        // client-supplied, stored in the DB
+
+public record UpdateHotelRequest(
+        @NotBlank String name,
+        @NotNull @DecimalMin("-90.0")  @DecimalMax("90.0")  Double latitude,
+        @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") Double longitude,
+        @Min(1) @Max(5) int rating,
+        @NotNull LocalDateTime time) { }
+</pre>
+
+<div class="page-break"></div>
+
+<h2><span class="step-no">3</span>Service layer</h2>
+<p>All business rules live here, behind the <code>HotelService</code> interface. <code>@Transactional</code> wraps each method in a DB transaction; <code>@Cacheable</code>/<code>@CacheEvict</code> keep single-hotel reads cached and evict on writes.</p>
+
+<span class="path">src/main/java/com/hackerrank/hotel/service/HotelServiceImpl.java</span>
+<pre>
+@Service
+public class HotelServiceImpl implements HotelService {
+
+    private final HotelRepository hotelRepository;
+    private final CityRepository cityRepository;
+    private final DistanceCalculator distanceCalculator;      // haversine impl injected
+    private final ApplicationEventPublisher eventPublisher;
+
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "hotels", key = "#id")
+    public Hotel getHotelById(Long id) {
+        Hotel hotel = hotelRepository.findById(id)
+                .orElseThrow(() -&gt; new ResourceNotFoundException("Hotel not found with id: " + id));
+        if (hotel.isDeleted()) {                              // soft-deleted rows look missing
+            throw new ResourceNotFoundException("Hotel not found with id: " + id);
+        }
+        return hotel;
+    }
+
+    @Override
+    @Transactional
+    public Hotel createHotel(CreateHotelRequest request) {
+        City city = cityRepository.findById(request.cityId()) // fail fast: clean 404, not an FK error
+                .orElseThrow(() -&gt; new ResourceNotFoundException(
+                        "City not found with id: " + request.cityId()));
+        Hotel hotel = new Hotel(request.name(), request.latitude(),
+                                request.longitude(), request.rating(), city);
+        hotel.setTime(request.time());                        // client-supplied timestamp
+        return hotelRepository.save(hotel);                   // INSERT, id generated by DB
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = "hotels", key = "#id")
+    public Hotel updateHotel(Long id, UpdateHotelRequest request) {
+        Hotel hotel = hotelRepository.findById(id)
+                .filter(h -&gt; !h.isDeleted())
+                .orElseThrow(() -&gt; new ResourceNotFoundException("Hotel not found with id: " + id));
+        hotel.setName(request.name());
+        hotel.setLatitude(request.latitude());
+        hotel.setLongitude(request.longitude());
+        hotel.setRating(request.rating());
+        hotel.setTime(request.time());
+        // no explicit save needed: dirty checking flushes the UPDATE at commit
+        return hotel;
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = "hotels", key = "#id")
+    public void deleteHotelById(Long id) {
+        Hotel hotel = hotelRepository.findById(id)
+                .orElseThrow(() -&gt; new ResourceNotFoundException("Hotel not found with id: " + id));
+        hotel.setDeleted(true);                               // soft delete — row stays
+        hotelRepository.save(hotel);
+        eventPublisher.publishEvent(new HotelDeletedEvent(
+                hotel.getId(), hotel.getName(), currentUsername()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List&lt;HotelSearchResult&gt; searchHotelsClosestToCityCenter(Long cityId, Integer limit) {
+        City city = cityRepository.findById(cityId)
+                .orElseThrow(() -&gt; new ResourceNotFoundException("City not found with id: " + cityId));
+        var results = hotelRepository.findByCityIdAndDeletedFalse(cityId).stream()
+                .map(hotel -&gt; toSearchResult(hotel, city))    // computes haversine distance
+                .sorted(Comparator.comparingDouble(HotelSearchResult::distanceFromCityCenterKm));
+        if (limit != null) results = results.limit(limit);
+        return results.toList();
+    }
+}
+</pre>
+
+<div class="page-break"></div>
+
+<h2><span class="step-no">4</span>Repository layer</h2>
+<p>Just an interface — Spring Data JPA generates the implementation and the SQL at startup. Method names are parsed into queries; <code>@Query</code> is used where a name would get unreadable.</p>
+
+<span class="path">src/main/java/com/hackerrank/hotel/repository/HotelRepository.java</span>
+<pre>
+@Repository
+public interface HotelRepository extends JpaRepository&lt;Hotel, Long&gt; {
+
+    // derived query: parsed into "where city_id = ? and deleted = false"
+    List&lt;Hotel&gt; findByCityIdAndDeletedFalse(Long cityId);
+
+    // case-insensitive substring match on the name, across all cities
+    List&lt;Hotel&gt; findByDeletedFalseAndNameContainingIgnoreCaseOrderByNameAsc(String name);
+
+    // hand-written JPQL for when a method name would get unreadable
+    @Query("select count(h) from Hotel h where h.deleted = false")
+    long countActive();
+
+    @Query("select count(h) from Hotel h where h.deleted = false and h.city.id = :cityId")
+    long countActiveInCity(@Param("cityId") Long cityId);
+}
+</pre>
+
+<h2><span class="step-no">5</span>Entity — what actually lands in the database</h2>
+<p>Hibernate maps this class to the <code>hotel</code> table (<code>ddl-auto=create</code> builds the schema from it on startup). Note the three different timestamps.</p>
+
+<span class="path">src/main/java/com/hackerrank/hotel/model/Hotel.java (fields)</span>
+<pre>
+@Entity
+@Table(name = "hotel")
+@EntityListeners(AuditingEntityListener.class)
+public class Hotel {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 120)
+    private String name;
+
+    private double latitude;
+    private double longitude;
+    private int rating;
+
+    private boolean deleted;              // soft-delete flag: row is never removed
+
+    @Column(name = "time")                // client-supplied via POST/PUT body
+    private LocalDateTime time;
+
+    @ManyToOne @JoinColumn(name = "city_id")
+    private City city;                    // FK → city table
+
+    @CreatedDate  @Column(name = "created_at", updatable = false)
+    private Instant createdAt;            // stamped automatically by JPA auditing
+
+    @LastModifiedDate @Column(name = "updated_at")
+    private Instant updatedAt;            // re-stamped on every update
+}
+</pre>
+
+<h2><span class="step-no">6</span>Error path — one handler for every layer</h2>
+<span class="path">src/main/java/com/hackerrank/hotel/exception/GlobalExceptionHandler.java (excerpt)</span>
+<pre>
+@RestControllerAdvice
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(ResourceNotFoundException.class)        // service throws → client gets 404
+    public ProblemDetail handleNotFound(ResourceNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("Resource not found");
+        return problem;
+    }
+
+    @ExceptionHandler(Exception.class)                        // anything unexpected → generic 500
+    public ProblemDetail handleUnexpected(Exception ex) {
+        log.error("Unhandled exception", ex);                 // log details, never leak them
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred. Please try again later.");
+    }
+}
+</pre>
+
+<footer>
+  Hotel Service · Spring Boot 4.1 / Java 21 · Print with your browser (Cmd/Ctrl+P) — the page is formatted for A4.
+</footer>
+
+</body>
+</html>
